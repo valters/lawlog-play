@@ -17,7 +17,7 @@ import play.api.libs.json.JsError
 
 /** component is injected into a controller */
 trait TableOfContents {
-  def likums(): String
+  def pamatlikums(): String
 }
 
 case class LawMetadata( url: String, print_id: String, desc: String )
@@ -27,19 +27,21 @@ case class LawMetadata( url: String, print_id: String, desc: String )
  */
 @Singleton
 class JsonTableOfContents extends TableOfContents {
+  private val TocJsonAsset = "app/assets/toc.json"
+  private val RootKey = "likumi"
+  private val Pamatlikums = "satversme"
+
   private val json: JsValue = readJson()
 
   implicit val lawReads = Json.reads[LawMetadata]
 
   def readJson(): JsValue = {
-    val stream = new FileInputStream( new File( "app/assets/toc.json" ) )
+    val stream = new FileInputStream( new File( TocJsonAsset ) )
     val json: JsValue = try { Json.parse( stream ) } finally { stream.close() }
-    ( json \ "likumi" ).get
+    ( json \ RootKey ).get
   }
 
   lazy val keys = json.as[JsObject].fieldSet.map( t => t._1 )
-
-  override def likums(): String = ( json \ "satversme" \ "desc" ).get.as[String]
 
   def law( key: String ): Option[LawMetadata] = {
     val jsResult = ( json \ key ).validate[LawMetadata]
@@ -49,15 +51,9 @@ class JsonTableOfContents extends TableOfContents {
     }
   }
 
-  def getLaw( key: String ): LawMetadata = {
-    val jsResult = ( json \ key ).validate[LawMetadata]
-    jsResult match {
-      case s: JsSuccess[LawMetadata] => s.get
-      case e: JsError => throw new RuntimeException("Errors: " + JsError.toJson(e).toString())
-    }
-  }
-
   // convert json to Map by binding key to corresponding LawMetadata: ultimately toMap converts our list of tuples into hash map
   lazy val laws: Map[String,LawMetadata] = keys.map( key => ( key, law( key ).get ) ).toMap
+
+  override def pamatlikums(): String = laws(Pamatlikums).desc
 
 }

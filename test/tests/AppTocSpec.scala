@@ -5,23 +5,23 @@ import services.JsonTableOfContents
 
 /** A very simple unit testing example. */
 class JsonTocSpec extends PlaySpec {
-  val json: JsonTableOfContents = new JsonTableOfContents
+  val appToc: JsonTableOfContents = new JsonTableOfContents
 
-  "Json TOC" should {
+  "App TOC" should {
     "read and parse configuration" in {
-      json.likums() mustBe "Latvijas Republikas Satversme"
+      appToc.pamatlikums() mustBe "Latvijas Republikas Satversme"
     }
 
     "read law metadata" in {
-      json.law("darba").get.desc mustBe "Darba likums"
+      appToc.law("darba").get.desc mustBe "Darba likums"
     }
 
     "read keys" in {
-      json.keys.size mustBe 29
+      appToc.keys.size mustBe 29
     }
 
     "print structure" in {
-      println("oh:"+json.laws.map( entry => entry._2.desc ) )
+      appToc.laws.values.map( _.desc ).size mustBe 29
     }
   }
 }
