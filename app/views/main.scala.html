@@ -4,20 +4,62 @@
  * two arguments, a `String` for the title of the page and an `Html`
  * object to insert into the body of the page.
  *@
-@(title: String)(content: Html)
+@(title: String, tab: String = "")(content: Html)
+
+@import tags._
 
 <!DOCTYPE html>
 <html lang="en">
     <head>
         @* Here's where we render the page title `String`. *@
         <title>@title</title>
+        <link rel='stylesheet' media="screen" href='@routes.Assets.versioned("lib/bootstrap/css/bootstrap.min.css")'>
+        <link rel='stylesheet' media="screen" href='@routes.Assets.versioned("lib/font-awesome/css/font-awesome.min.css")'>
         <link rel="stylesheet" media="screen" href="@routes.Assets.versioned("stylesheets/main.css")">
+
+        <script src="@routes.Assets.versioned("lib/jquery/jquery.min.js")" type="text/javascript"></script>
+        <script src="@routes.Assets.versioned("lib/bootstrap/js/bootstrap.min.js")" type="text/javascript"></script>
+
         <link rel="shortcut icon" type="image/png" href="@routes.Assets.versioned("images/favicon.png")">
-        <script src="@routes.Assets.versioned("javascripts/hello.js")" type="text/javascript"></script>
     </head>
-    <body>
+    <body tab="@tab">
+        <div class="navbar navbar-default navbar-fixed-top">
+            <div class="container">
+                <div class="navbar-header">
+                    <a class="navbar-brand @("active".when(tab == "index"))" href="@routes.HomeController.index">Law Log</a>
+                    <button class="navbar-toggle" type="button" data-toggle="collapse" data-target="#navbar-main">
+                        <span class="sr-only">Toggle navigation</span>
+                        <span class="icon-bar"></span>
+                        <span class="icon-bar"></span>
+                        <span class="icon-bar"></span>
+                    </button>
+                </div>
+
+                <div class="navbar-collapse collapse" id="navbar-main">
+                    <ul class="nav navbar-nav">
+                        <li class="disabled dropdown @("active".when(Seq("likumi", "versijas").contains(tab)))">
+                            <a href="#" class="disabled dropdown-toggle" data-toggle="dropdown" role="button" aria-expanded="false">Versijas <span class="caret"></span></a>
+                            <ul class="dropdown-menu" role="menu">
+                            </ul>
+                        </li>
+                    </ul>
+                </div>
+
+            </div>
+        </div>
+
+        <div class="container">
         @* And here's where we render the `Html` object containing
          * the page content. *@
-        @content
+            @content
+        </div>
+
+        <div class="footer">
+            <div class="container">
+                <p>@repository.home("""<i class="fa fa-github fa-2x"></i> View on Github""").
+                Code licensed under <a href="https://www.gnu.org/licenses/gpl-3.0.html" target="_blank">GPLv3</a></p>
+            </div>
+        </div>
+
     </body>
 </html>

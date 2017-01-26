@@ -23,9 +23,7 @@ class HomeController @Inject() (likumi: TableOfContents) extends Controller {
    * a path of `/`.
    */
   def index = Action {
-    Ok( views.html.index( "Your new application is ready.", likumi.likums() ) )
+    Ok( views.html.index( "My new application is ready." ) )
   }
 
 }
-
-
