@@ -1,0 +1,33 @@
+syntax: glob
+
+# General files and folders
+bin/
+tmp/
+target/
+target_sbt/
+.cache/
+.history
+
+# Eclipse
+.settings/
+.metadata
+*.tmp
+*.bak
+*.swp
+*~.nib
+local.properties
+.loadpath
+.project
+*.launch
+.classpath
+.factorypath
+.buildpath
+.target
+.texlipse
+
+# Play
+.sbtserver/
+logs/
+project/.sbtserver*
+libexec/
+.cache-*
