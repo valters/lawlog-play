@@ -13,7 +13,7 @@ class JsonTocSpec extends PlaySpec {
     }
 
     "read law metadata" in {
-      appToc.law("darba").get.desc mustBe "Darba likums"
+      appToc.validateLaw("darba").get.desc mustBe "Darba likums"
     }
 
     "read keys" in {

@@ -17,6 +17,12 @@ import play.api.libs.json.JsError
 
 /** component is injected into a controller */
 trait TableOfContents {
+  /** list of law keys available */
+  def keys(): Seq[String]
+  /** get full metadata */
+  def law( key: String ): LawMetadata
+
+  /** for testing */
   def pamatlikums(): String
 }
 
@@ -41,19 +47,22 @@ class JsonTableOfContents extends TableOfContents {
     ( json \ RootKey ).get
   }
 
-  lazy val keys = json.as[JsObject].fieldSet.map( t => t._1 )
+  /** preserve original key order */
+  lazy val keys: Seq[String] = json.as[JsObject].fields.map( t ⇒ t._1 )
 
-  def law( key: String ): Option[LawMetadata] = {
+  def validateLaw( key: String ): Option[LawMetadata] = {
     val jsResult = ( json \ key ).validate[LawMetadata]
     jsResult match {
-      case s: JsSuccess[LawMetadata] => Some( s.get )
-      case e: JsError => println("Errors: " + JsError.toJson(e).toString()); None
+      case s: JsSuccess[LawMetadata] ⇒ Some( s.get )
+      case e: JsError                ⇒ println( "Errors: "+JsError.toJson( e ).toString() ); None
     }
   }
 
   // convert json to Map by binding key to corresponding LawMetadata: ultimately toMap converts our list of tuples into hash map
-  lazy val laws: Map[String,LawMetadata] = keys.map( key => ( key, law( key ).get ) ).toMap
+  lazy val laws: Map[String, LawMetadata] = keys.map( key ⇒ ( key, validateLaw( key ).get ) ).toMap
 
-  override def pamatlikums(): String = laws(Pamatlikums).desc
+  override def law(key: String): LawMetadata = laws(key)
+
+  override def pamatlikums(): String = laws( Pamatlikums ).desc
 
 }

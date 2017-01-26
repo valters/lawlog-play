@@ -3,10 +3,6 @@ package controllers
 import javax.inject._
 import play.api._
 import play.api.mvc._
-import java.io.File
-import java.io.FileInputStream
-import play.api.libs.json.Json
-import play.api.libs.json.JsValue
 import services.TableOfContents
 
 /**
@@ -14,7 +10,7 @@ import services.TableOfContents
  * application's home page.
  */
 @Singleton
-class HomeController @Inject() (likumi: TableOfContents) extends Controller {
+class HomeController @Inject() ( appToc: TableOfContents ) extends Controller {
 
   /**
    * Create an Action to render an HTML page with a welcome message.
@@ -23,7 +19,7 @@ class HomeController @Inject() (likumi: TableOfContents) extends Controller {
    * a path of `/`.
    */
   def index = Action {
-    Ok( views.html.index( "My new application is ready." ) )
+    Ok( views.html.index( appToc ) )
   }
 
 }
