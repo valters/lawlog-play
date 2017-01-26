@@ -1,0 +1,9 @@
+@(key: String, law: services.LawMetadata)
+
+@main("LawLog :: "+law.desc, "index") {
+
+    <p>@key</p>
+
+    <p>@key - @law.desc</p>
+
+}
