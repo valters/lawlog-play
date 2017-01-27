@@ -13,6 +13,12 @@ class FileReaderSpec extends PlaySpec {
       lines(1) mustBe "1"
       lines(5) mustBe "5"
     }
+
+    "read all content in file" in {
+      val line = FileReader.readFile( "test/test.ver" )
+      line mustBe "0\n1\n2\n3\n4\n5\n6"
+    }
+
   }
 
 }

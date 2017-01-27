@@ -32,5 +32,9 @@ class JsonTocSpec extends PlaySpec {
       appToc.versions("$missing file$").size mustBe 0
     }
 
+    "produce law version resource" in {
+      appToc.law("apl").diffFor("-") mustBe "app/likumi-db/diff/apl/-.html.txt-diff.xml"
+    }
+
   }
 }

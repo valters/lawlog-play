@@ -5,6 +5,8 @@ import play.api._
 import play.api.mvc._
 import services.TableOfContents
 import utils.DateParam
+import utils.FileReader
+import play.twirl.api.Html
 
 @Singleton
 class LawController @Inject() ( appToc: TableOfContents ) extends Controller {
@@ -12,10 +14,10 @@ class LawController @Inject() ( appToc: TableOfContents ) extends Controller {
   def index( id: String ) = Action {
     try {
       val law = appToc.law( id )
-      val versions = appToc.versions( id )
-      val currVer = versions.head
+      val currVer = law.versions.head
       val diffVer = DateParam.eurToIso(currVer)
-      Ok( views.html.law( id, law, versions, currVer, diffVer ) )
+      val diffContent = Html( FileReader.readFile( law.diffFor( diffVer ) ) )
+      Ok( views.html.law( id, law, currVer, diffVer, diffContent ) )
     }
     catch {
       case e: NoSuchElementException =>
@@ -25,9 +27,9 @@ class LawController @Inject() ( appToc: TableOfContents ) extends Controller {
 
   def version( id: String, ver: String ) = Action {
       val law = appToc.law( id )
-      val versions = appToc.versions( id )
       val currVer = DateParam.isoToEur(ver)
       val diffVer = DateParam.eurToIso(currVer)
-      Ok( views.html.law( id, law, versions, currVer, diffVer ) )
+      val diffContent = Html( FileReader.readFile( law.diffFor( diffVer ) ) )
+      Ok( views.html.law( id, law, currVer, diffVer, diffContent ) )
   }
 }

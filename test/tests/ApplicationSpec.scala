@@ -49,11 +49,11 @@ class ApplicationSpec extends PlaySpec with OneAppPerTest {
     }
 
     "render the law version page" in {
-      val home = route(app, FakeRequest(GET, "/likums/satversme/v/19221107")).get
+      val home = route(app, FakeRequest(GET, "/likums/satversme/v/19330321")).get
 
       status(home) mustBe OK
       contentType(home) mustBe Some("text/html")
-      contentAsString(home) must include ("07.11.1922")
+      contentAsString(home) must include ("21.03.1933")
     }
 
   }

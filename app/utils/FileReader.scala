@@ -11,6 +11,7 @@ import scala.collection.convert.wrapAsScala.asScalaBuffer
 
 import play.api.libs.json.JsValue
 import play.api.libs.json.Json
+import java.nio.charset.StandardCharsets
 
 object FileReader {
 
@@ -28,6 +29,12 @@ object FileReader {
     val stream = new FileInputStream( new File( file ) )
     val json: JsValue = try { Json.parse( stream ) } finally { stream.close() }
     json
+  }
+
+  /** Uses java API. */
+  def readFile( file: String): String = {
+    val bytes: Array[Byte] = Files.readAllBytes( Paths.get( file ) )
+    new String( bytes, StandardCharsets.UTF_8 )
   }
 
 }

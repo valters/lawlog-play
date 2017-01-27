@@ -6,7 +6,7 @@
 
     <ul>
         @appToc.keys.map { key =>
-            <li><a href="@routes.LawController.index(key)">@appToc.law(key).desc</a> <small>( <i class="fa fa-database" aria-hidden="true"></i> <a href="@appToc.law(key).url">likumi.lv</a>)</small></li>
+            <li><a href="@routes.LawController.index(key)">@appToc.law(key).meta.desc</a> <small>( <i class="fa fa-database" aria-hidden="true"></i> <a href="@appToc.law(key).meta.url">likumi.lv</a>)</small></li>
         }
     </ul>
 

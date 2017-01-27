@@ -1,15 +1,22 @@
-@(key: String, law: services.LawMetadata, versions: Seq[String], currVer: String, diffVer: String)
+@(key: String, law: services.LawMetadata, currVer: String, diffVer: String, diffContent: Html)
 
-@main("LawLog :: "+law.desc, "index") {
+@import utils.DateParam._
 
-    <p>@key :: @law.desc</p>
+@main("LawLog :: "+law.meta.desc, "index") {
+
+    <p>@key :: @law.meta.desc</p>
 
     <p>@key - @currVer - @diffVer</p>
 
     <ul>
-        @versions.map { ver =>
-            <li><a href="@routes.LawController.index(key)">@ver</a></li>
+        @law.isoVersions.map { case (date, isoDt) =>
+            <li><a href="@routes.LawController.version( key, isoDt )">@date</a></li>
         }
     </ul>
+
+    <div class="container">
+        @diffContent
+    </div>
+
 
 }
