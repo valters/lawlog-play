@@ -1,8 +1,5 @@
 package services
 
-import java.io.File
-import java.io.FileInputStream
-
 import scala.collection.mutable.HashMap
 
 import javax.inject.Singleton
@@ -20,7 +17,9 @@ trait TableOfContents {
   def keys(): Seq[String]
   /** get full metadata */
   def law( key: String ): LawMetadata
-  /** @param key law short-id */
+  /** @param key law short-id
+   * @return list of known versions (dates when law was changed)
+   */
   def versions( key: String ): Seq[String]
 
   /** for testing */
@@ -34,11 +33,13 @@ case class LawMetadata( url: String, print_id: String, desc: String )
  */
 @Singleton
 class JsonTableOfContents extends TableOfContents {
+  /** actual content is provided by likumi-db project: https://github.com/valters/likumi-db */
   protected val AssetRoot = "app/likumi-db"
+  /** main point of entry */
   protected val TocJsonAsset = AssetRoot+"/toc.json"
   protected val JsonRootKey = "likumi"
   protected val Pamatlikums = "satversme"
-  /** law version info is stored here */
+  /** for each law, known versions list is stored here, in .ver file */
   protected val VersionsRoot = AssetRoot+"/version"
 
   protected val json: JsValue = readJson()
@@ -46,8 +47,7 @@ class JsonTableOfContents extends TableOfContents {
   implicit val lawReads = Json.reads[LawMetadata]
 
   def readJson(): JsValue = {
-    val stream = new FileInputStream( new File( TocJsonAsset ) )
-    val json: JsValue = try { Json.parse( stream ) } finally { stream.close() }
+    val json: JsValue = FileReader.readJson( TocJsonAsset )
     ( json \ JsonRootKey ).get
   }
 
@@ -69,6 +69,10 @@ class JsonTableOfContents extends TableOfContents {
 
   override def pamatlikums(): String = laws( Pamatlikums ).desc
 
+  /** holds information we read from .ver files. A .ver file contains list of
+   *  dates when law was changed, which we then later map to diff file
+   *  (which is xml file containing changes report).
+   */
   val versionsMap: HashMap[String, Seq[String]] = new HashMap()
 
   override def versions( key: String ) = {
