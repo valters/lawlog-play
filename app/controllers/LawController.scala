@@ -9,8 +9,15 @@ import services.TableOfContents
 class LawController @Inject() ( appToc: TableOfContents ) extends Controller {
 
   def index( id: String ) = Action {
-    val law = appToc.law( id )
-    Ok( views.html.law( id, law ) )
+    try {
+      val law = appToc.law( id )
+      val versions = appToc.versions( id )
+      Ok( views.html.law( id, law, versions ) )
+    }
+    catch {
+      case e: NoSuchElementException =>
+        NotFound( s"Unrecognized: $id" )
+    }
   }
 
 }

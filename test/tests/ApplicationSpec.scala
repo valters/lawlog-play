@@ -41,6 +41,13 @@ class ApplicationSpec extends PlaySpec with OneAppPerTest {
       contentAsString(home) must include ("satversme")
     }
 
+    "render 404 for non-existing law" in {
+      val home = route(app, FakeRequest(GET, "/likums/$non-existing$")).get
+
+      status(home) mustBe NOT_FOUND
+      contentAsString(home) must include ("$non-existing$")
+    }
+
   }
 
 }

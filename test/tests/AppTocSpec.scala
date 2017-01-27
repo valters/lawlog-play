@@ -23,5 +23,14 @@ class JsonTocSpec extends PlaySpec {
     "print structure" in {
       appToc.laws.values.map( _.desc ).size mustBe 29
     }
+
+    "read an existing version data" in {
+      appToc.versions("apl").size mustBe 7
+    }
+
+    "ignore missing version file" in {
+      appToc.versions("$missing file$").size mustBe 0
+    }
+
   }
 }

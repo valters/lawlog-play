@@ -3,17 +3,15 @@ package services
 import java.io.File
 import java.io.FileInputStream
 
+import scala.collection.mutable.HashMap
+
 import javax.inject.Singleton
+import play.api.Logger
+import play.api.libs.json.JsError
+import play.api.libs.json.JsObject
+import play.api.libs.json.JsSuccess
 import play.api.libs.json.JsValue
 import play.api.libs.json.Json
-import play.api.libs.json.JsLookup
-import play.api.libs.json.JsObject
-import scala.collection.Set
-import play.api.libs.json.Reads
-import play.api.libs.json.JsPath
-import play.api.libs.functional.syntax._
-import play.api.libs.json.JsSuccess
-import play.api.libs.json.JsError
 
 /** component is injected into a controller */
 trait TableOfContents {
@@ -21,6 +19,8 @@ trait TableOfContents {
   def keys(): Seq[String]
   /** get full metadata */
   def law( key: String ): LawMetadata
+  /** @param key law short-id */
+  def versions( key: String ): Seq[String]
 
   /** for testing */
   def pamatlikums(): String
@@ -33,11 +33,14 @@ case class LawMetadata( url: String, print_id: String, desc: String )
  */
 @Singleton
 class JsonTableOfContents extends TableOfContents {
-  private val TocJsonAsset = "app/assets/toc.json"
-  private val RootKey = "likumi"
-  private val Pamatlikums = "satversme"
+  protected val AssetRoot = "app/assets"
+  protected val TocJsonAsset = AssetRoot+"/toc.json"
+  protected val RootKey = "likumi"
+  protected val Pamatlikums = "satversme"
+  /** law version info is stored here */
+  protected val VersionsRoot = AssetRoot+"/versijas"
 
-  private val json: JsValue = readJson()
+  protected val json: JsValue = readJson()
 
   implicit val lawReads = Json.reads[LawMetadata]
 
@@ -54,15 +57,33 @@ class JsonTableOfContents extends TableOfContents {
     val jsResult = ( json \ key ).validate[LawMetadata]
     jsResult match {
       case s: JsSuccess[LawMetadata] ⇒ Some( s.get )
-      case e: JsError                ⇒ println( "Errors: "+JsError.toJson( e ).toString() ); None
+      case e: JsError ⇒ println( "Errors: "+JsError.toJson( e ).toString() ); None
     }
   }
 
   // convert json to Map by binding key to corresponding LawMetadata: ultimately toMap converts our list of tuples into hash map
   lazy val laws: Map[String, LawMetadata] = keys.map( key ⇒ ( key, validateLaw( key ).get ) ).toMap
 
-  override def law(key: String): LawMetadata = laws(key)
+  override def law( key: String ): LawMetadata = laws( key )
 
   override def pamatlikums(): String = laws( Pamatlikums ).desc
 
+  val versionsMap: HashMap[String, Seq[String]] = new HashMap()
+
+  override def versions( key: String ) = {
+    versionsMap.getOrElseUpdate( key, readVersions( key ) )
+  }
+
+  /** @return empty if error occurred reading file */
+  def readVersions( key: String ): Seq[String] = {
+    val versionFile = VersionsRoot+"/"+key+".ver"
+    try {
+      FileReader.readLines( versionFile )
+    }
+    catch {
+      case e: Exception ⇒
+        Logger.error( s"Failed to read $versionFile: ", e )
+        Seq.empty
+    }
+  }
 }

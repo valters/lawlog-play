@@ -1,9 +1,15 @@
-@(key: String, law: services.LawMetadata)
+@(key: String, law: services.LawMetadata, versions: Seq[String])
 
 @main("LawLog :: "+law.desc, "index") {
 
     <p>@key</p>
 
     <p>@key - @law.desc</p>
+
+    <ul>
+        @versions.map { ver =>
+            <li><a href="@routes.LawController.index(key)">@ver</a></li>
+        }
+    </ul>
 
 }
