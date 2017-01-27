@@ -31,3 +31,6 @@ logs/
 project/.sbtserver*
 libexec/
 .cache-*
+
+# Runtime
+app/likumi-db/
