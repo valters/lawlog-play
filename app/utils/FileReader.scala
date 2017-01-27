@@ -1,9 +1,10 @@
-package services
+package utils
 
 import java.nio.file.Paths
 import java.nio.file.Files
 import java.util.stream.Collectors
 import scala.collection.convert.wrapAsScala._
+import scala.Vector
 
 object FileReader {
 

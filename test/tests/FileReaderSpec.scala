@@ -1,7 +1,7 @@
 package tests
 
 import org.scalatestplus.play._
-import services.FileReader
+import utils.FileReader
 
 class FileReaderSpec extends PlaySpec {
 

@@ -12,6 +12,7 @@ import play.api.libs.json.JsObject
 import play.api.libs.json.JsSuccess
 import play.api.libs.json.JsValue
 import play.api.libs.json.Json
+import utils.FileReader
 
 /** component is injected into a controller */
 trait TableOfContents {
@@ -33,12 +34,12 @@ case class LawMetadata( url: String, print_id: String, desc: String )
  */
 @Singleton
 class JsonTableOfContents extends TableOfContents {
-  protected val AssetRoot = "app/assets"
+  protected val AssetRoot = "app/likumi-db"
   protected val TocJsonAsset = AssetRoot+"/toc.json"
-  protected val RootKey = "likumi"
+  protected val JsonRootKey = "likumi"
   protected val Pamatlikums = "satversme"
   /** law version info is stored here */
-  protected val VersionsRoot = AssetRoot+"/versijas"
+  protected val VersionsRoot = AssetRoot+"/version"
 
   protected val json: JsValue = readJson()
 
@@ -47,7 +48,7 @@ class JsonTableOfContents extends TableOfContents {
   def readJson(): JsValue = {
     val stream = new FileInputStream( new File( TocJsonAsset ) )
     val json: JsValue = try { Json.parse( stream ) } finally { stream.close() }
-    ( json \ RootKey ).get
+    ( json \ JsonRootKey ).get
   }
 
   /** preserve original key order */
