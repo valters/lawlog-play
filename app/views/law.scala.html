@@ -1,10 +1,10 @@
-@(key: String, law: services.LawMetadata, versions: Seq[String])
+@(key: String, law: services.LawMetadata, versions: Seq[String], currVer: String, diffVer: String)
 
 @main("LawLog :: "+law.desc, "index") {
 
-    <p>@key</p>
+    <p>@key :: @law.desc</p>
 
-    <p>@key - @law.desc</p>
+    <p>@key - @currVer - @diffVer</p>
 
     <ul>
         @versions.map { ver =>
