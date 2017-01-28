@@ -9,7 +9,7 @@
     <p>@key - @currVer - @diffVer</p>
 
     <ul>
-        @law.isoVersions.map { case (date, isoDt) =>
+        @for( ( date, isoDt ) <- law.isoVersions ) {
             <li><a href="@routes.LawController.version( key, isoDt )">@date</a></li>
         }
     </ul>

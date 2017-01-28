@@ -33,7 +33,17 @@ class JsonTocSpec extends PlaySpec {
     }
 
     "produce law version resource" in {
-      appToc.law("apl").diffFor("-") mustBe "app/likumi-db/diff/apl/-.html.txt-diff.xml"
+      appToc.law("apl").diffFileFor("-") mustBe "app/likumi-db/diff/apl/-.html.txt-diff.xml"
+    }
+
+    "print version list" in {
+      for( ( date, isoDt ) <- appToc.law("apl").isoVersions ) {
+        println( date +"+"+ isoDt )
+      }
+    }
+
+    "extract diff from xml" in {
+      appToc.law("apl").diffContent( "test/test.xml") mustBe "[IMG]"
     }
 
   }

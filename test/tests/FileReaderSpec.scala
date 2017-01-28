@@ -2,6 +2,7 @@ package tests
 
 import org.scalatestplus.play._
 import utils.FileReader
+import scala.xml.Elem
 
 class FileReaderSpec extends PlaySpec {
 
@@ -17,6 +18,11 @@ class FileReaderSpec extends PlaySpec {
     "read all content in file" in {
       val line = FileReader.readFile( "test/test.ver" )
       line mustBe "0\n1\n2\n3\n4\n5\n6"
+    }
+
+    "read xml" in {
+      val txt: String = FileReader.nodeText( FileReader.readXml( "test/test.xml" ), "/diffreport/diff" )
+      txt mustBe "[IMG]"
     }
 
   }

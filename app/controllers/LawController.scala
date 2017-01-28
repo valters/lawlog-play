@@ -16,7 +16,7 @@ class LawController @Inject() ( appToc: TableOfContents ) extends Controller {
       val law = appToc.law( id )
       val currVer = law.versions.head
       val diffVer = DateParam.eurToIso(currVer)
-      val diffContent = Html( FileReader.readFile( law.diffFor( diffVer ) ) )
+      val diffContent = Html( law.diffContent( law.diffFileFor( diffVer ) ) )
       Ok( views.html.law( id, law, currVer, diffVer, diffContent ) )
     }
     catch {
@@ -29,7 +29,7 @@ class LawController @Inject() ( appToc: TableOfContents ) extends Controller {
       val law = appToc.law( id )
       val currVer = DateParam.isoToEur(ver)
       val diffVer = DateParam.eurToIso(currVer)
-      val diffContent = Html( FileReader.readFile( law.diffFor( diffVer ) ) )
+      val diffContent = Html( law.diffContent( law.diffFileFor( diffVer ) ) )
       Ok( views.html.law( id, law, currVer, diffVer, diffContent ) )
   }
 }

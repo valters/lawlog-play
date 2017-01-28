@@ -47,8 +47,12 @@ class LawMetadata( val key: String, val meta: LawMetadataJson, val versions: Seq
   val isoVersions: Seq[(String,String)] = versions.map( s => (s, DateParam.eurToIso( s ) ) )
 
   /** @param version iso date */
-  def diffFor( version: String ): String = {
+  def diffFileFor( version: String ): String = {
     LikumiDb.DiffsRoot + "/" + key + "/" + version + LikumiDb.DiffReportSuffix
+  }
+
+  def diffContent( file: String ): String = {
+    FileReader.nodeText( FileReader.readXml( file ), "/diffreport/diff" )
   }
 
 }

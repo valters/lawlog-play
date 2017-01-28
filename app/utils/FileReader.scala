@@ -12,8 +12,15 @@ import scala.collection.convert.wrapAsScala.asScalaBuffer
 import play.api.libs.json.JsValue
 import play.api.libs.json.Json
 import java.nio.charset.StandardCharsets
+import io.github.valters.xml.XmlDomUtils
+import org.w3c.dom.Document
+import io.github.valters.xml.TransformToString
+import io.github.valters.xml.XPathUtils
 
 object FileReader {
+
+  val transform: TransformToString = new TransformToString()
+  val xpath: XPathUtils = new XPathUtils()
 
   /** Uses java.nio API. Throws exception if anything goes wrong.
    *  @return scala collection
@@ -35,6 +42,17 @@ object FileReader {
   def readFile( file: String): String = {
     val bytes: Array[Byte] = Files.readAllBytes( Paths.get( file ) )
     new String( bytes, StandardCharsets.UTF_8 )
+  }
+
+  def readXml( file: String ): Document = {
+    val stream = new java.io.FileInputStream( new File( file ) )
+    val xml: Document = try { XmlDomUtils.documentBuilder().parse( stream ) } finally { stream.close() }
+    xml
+  }
+
+  def nodeText( document: Document, xpathExpr: String): String = {
+    val text = transform.nodesToString( xpath.findNode( document, xpathExpr).getChildNodes() )
+    text
   }
 
 }
