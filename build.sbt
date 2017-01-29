@@ -15,6 +15,8 @@ libraryDependencies += "org.webjars" % "jquery" % "2.2.4"
 libraryDependencies += "org.webjars" % "bootstrap" % "3.3.7-1" exclude("org.webjars", "jquery")
 libraryDependencies += "org.webjars" % "font-awesome" % "4.7.0"
 
+// xml
+libraryDependencies += "io.github.valters" % "valters-xml" % "1.0.0"
 
 
 fork in run := false
