@@ -7,6 +7,10 @@ import services.TableOfContents
 import utils.DateParam
 import utils.FileReader
 import play.twirl.api.Html
+import play.api.libs.json.Json
+import play.api.libs.json.JsString
+import play.api.libs.json.JsObject
+import play.api.libs.json.JsValue
 
 @Singleton
 class LawController @Inject() ( appToc: TableOfContents ) extends Controller {
@@ -33,6 +37,16 @@ class LawController @Inject() ( appToc: TableOfContents ) extends Controller {
       val currVer = DateParam.isoToEur(ver)
       val diffVer = DateParam.eurToIso(currVer)
       renderVersion( id, law, currVer, diffVer )
+  }
+
+  /** ajax request support */
+  def rawVersion( id: String, ver: String ) = Action {
+      val law = appToc.law( id )
+      val currVer = DateParam.isoToEur(ver)
+      val diffVer = DateParam.eurToIso(currVer)
+      val diffContent: String = law.diffContent( law.diffFileFor( diffVer ) )
+      //val jsonContent: JsValue = JsObject( Seq( "diff" -> JsString( diffContent ) ) )
+      Ok( Html( diffContent ) )
   }
 
   def renderVersion(id: String, law: services.LawMetadata, currVer: String, diffVer: String): Result = {

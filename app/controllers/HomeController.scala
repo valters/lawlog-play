@@ -4,6 +4,7 @@ import javax.inject._
 import play.api._
 import play.api.mvc._
 import services.TableOfContents
+import play.twirl.api.Html
 
 /**
  * This controller creates an `Action` to handle HTTP requests to the
@@ -20,6 +21,11 @@ class HomeController @Inject() ( appToc: TableOfContents ) extends Controller {
    */
   def index = Action {
     Ok( views.html.index( appToc ) )
+  }
+
+  def sandbox = Action {
+    val script = routes.Assets.versioned("javascripts/hello.js")
+    Ok( views.html.sandbox( "testing", Html(s"""<script src="$script" type="text/javascript"></script>""" ) ) )
   }
 
 }
