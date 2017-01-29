@@ -7,6 +7,7 @@
 @(title: String, tab: String = "")(content: Html)
 
 @import tags._
+@import utils.AppInfo
 
 <!DOCTYPE html>
 <html lang="en">
@@ -59,6 +60,7 @@
             <div class="container">
                 <p>@repository.home("""<i class="fa fa-github fa-2x"></i> View on Github""").
                 Code licensed under <a href="https://www.gnu.org/licenses/gpl-3.0.html" target="_blank">GPLv3</a></p>
+                <p>Kaut kas nestrādā? Lūdzu dod ziņu iekš <a href="@AppInfo.ReportIssues">projekta Github issues</a>.</p>
             </div>
         </div>
 

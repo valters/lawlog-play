@@ -3,20 +3,34 @@
 @import utils.DateParam._
 
 @main("LawLog :: "+law.meta.desc, "index") {
-
-    <p>@key :: @law.meta.desc</p>
-
-    <p>@key - @currVer - @diffVer</p>
-
-    <ul>
+<div class="container">
+    <div class="row">
+        <div class="wrapper">
+            <div class="side-bar">
+                <ul>
+                    <li class="menu-head">
+                        Versijas
+                    </li>
+                    <div class="menu">
         @for( ( date, isoDt ) <- law.isoVersions ) {
-            <li><a href="@routes.LawController.version( key, isoDt )">@date</a></li>
+            <li><a href="@routes.LawController.version( key, isoDt )" @if( currVer == date ) { class="active" }>@date</a></li>
         }
-    </ul>
+                    </div>
 
-    <div class="container">
-        @diffContent
+                </ul>
+            </div>
+            <div class="content">
+                <div class="col-md-12">
+                    <div class="panel panel-default">
+                        <div class="panel-heading">@law.meta.desc</div>
+                        <div class="panel-body">
+@diffContent
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
-
+</div>
 
 }
