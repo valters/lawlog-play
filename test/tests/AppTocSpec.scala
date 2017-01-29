@@ -43,7 +43,7 @@ class JsonTocSpec extends PlaySpec {
     }
 
     "extract diff from xml" in {
-      appToc.law("apl").diffContent( "test/test.xml") mustBe "[IMG]"
+      appToc.law("apl").diffContent( "test/test.xml") mustBe "[IMG]<p>test</p>\n<br/>\n[GIF]"
     }
 
   }

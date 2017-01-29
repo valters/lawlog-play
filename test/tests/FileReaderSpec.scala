@@ -22,7 +22,7 @@ class FileReaderSpec extends PlaySpec {
 
     "read xml" in {
       val txt: String = FileReader.nodeText( FileReader.readXml( "test/test.xml" ), "/diffreport/diff" )
-      txt mustBe "[IMG]"
+      txt mustBe "[IMG]<p>test</p>\n<br/>\n[GIF]"
     }
 
   }
