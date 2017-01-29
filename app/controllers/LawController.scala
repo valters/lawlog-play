@@ -14,14 +14,17 @@ class LawController @Inject() ( appToc: TableOfContents ) extends Controller {
   def index( id: String ) = Action {
     try {
       val law = appToc.law( id )
-      val currVer = law.versions.head
-      val diffVer = DateParam.eurToIso(currVer)
-      val diffContent = Html( law.diffContent( law.diffFileFor( diffVer ) ) )
-      Ok( views.html.law( id, law, currVer, diffVer, diffContent ) )
+      law.isoVersions match {
+        case Nil => NotFound( s"No diffs found for law: $id" )
+
+        case (currVer,diffVer) +: _ => { // take seq [vector] head (don't care about rest), explode tuple into variables
+          renderVersion( id, law, currVer, diffVer )
+        }
+      }
     }
     catch {
       case e: NoSuchElementException =>
-        NotFound( s"Unrecognized: $id" )
+        NotFound( s"Unrecognized law: $id" )
     }
   }
 
@@ -29,7 +32,12 @@ class LawController @Inject() ( appToc: TableOfContents ) extends Controller {
       val law = appToc.law( id )
       val currVer = DateParam.isoToEur(ver)
       val diffVer = DateParam.eurToIso(currVer)
-      val diffContent = Html( law.diffContent( law.diffFileFor( diffVer ) ) )
-      Ok( views.html.law( id, law, currVer, diffVer, diffContent ) )
+      renderVersion( id, law, currVer, diffVer )
   }
+
+  def renderVersion(id: String, law: services.LawMetadata, currVer: String, diffVer: String): Result = {
+    val diffContent = Html( law.diffContent( law.diffFileFor( diffVer ) ) )
+    Ok( views.html.law( id, law, currVer, diffVer, diffContent ) )
+  }
+
 }
