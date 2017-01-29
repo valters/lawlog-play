@@ -34,6 +34,8 @@ object LikumiDb {
   val VersionsRoot = AssetRoot+"/version"
   val DiffsRoot = AssetRoot+"/diff"
   val DiffReportSuffix = ".html.txt-diff.xml"
+  /** we take content from this root node */
+  val DiffElementXpath = "/diffreport/diff";
 }
 
 /** is read from json file directly */
@@ -52,7 +54,12 @@ class LawMetadata( val key: String, val meta: LawMetadataJson, val versions: Seq
   }
 
   def diffContent( file: String ): String = {
-    FileReader.nodeText( FileReader.readXml( file ), "/diffreport/diff" )
+    if( ! FileReader.exists( file ) ) {
+      s"(sorry, '$file' is not available)"
+    }
+    else {
+      FileReader.nodeText( FileReader.readXml( file ), LikumiDb.DiffElementXpath )
+    }
   }
 
 }

@@ -22,24 +22,25 @@ object FileReader {
   val transform: TransformToString = new TransformToString()
   val xpath: XPathUtils = new XPathUtils()
 
-  /** Uses java.nio API. Throws exception if anything goes wrong.
+  /**
+   * Uses java.nio API. Throws exception if anything goes wrong.
    *  @return scala collection
    */
   def readLines( file: String ): Vector[String] = {
     val stream = Files.lines( Paths.get( file ) )
     val lines: java.util.List[String] = try { stream.collect( Collectors.toList() ) } finally { stream.close() }
-    Vector(lines: _*) // operator _* explodes the list into var-args suitable for vector constructor
+    Vector( lines: _* ) // operator _* explodes the list into var-args suitable for vector constructor
   }
 
   /** Uses java API. */
-  def readJson( file: String): JsValue = {
+  def readJson( file: String ): JsValue = {
     val stream = new FileInputStream( new File( file ) )
     val json: JsValue = try { Json.parse( stream ) } finally { stream.close() }
     json
   }
 
   /** Uses java API. */
-  def readFile( file: String): String = {
+  def readFile( file: String ): String = {
     val bytes: Array[Byte] = Files.readAllBytes( Paths.get( file ) )
     new String( bytes, StandardCharsets.UTF_8 )
   }
@@ -50,9 +51,13 @@ object FileReader {
     xml
   }
 
-  def nodeText( document: Document, xpathExpr: String): String = {
-    val text = transform.nodesToString( xpath.findNode( document, xpathExpr).getChildNodes() )
+  def nodeText( document: Document, xpathExpr: String ): String = {
+    val text = transform.nodesToString( xpath.findNode( document, xpathExpr ).getChildNodes() )
     text
+  }
+
+  def exists( file: String ): Boolean = {
+    new File( file ).exists()
   }
 
 }
