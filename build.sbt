@@ -18,5 +18,11 @@ libraryDependencies += "org.webjars" % "font-awesome" % "4.7.0"
 // xml
 libraryDependencies += "io.github.valters" % "valters-xml" % "1.0.0"
 
+// acme
+libraryDependencies += "com.nimbusds" % "nimbus-jose-jwt" % "4.34.1"
+
+// logging
+libraryDependencies += "com.typesafe.scala-logging" %% "scala-logging" % "3.5.0"
+libraryDependencies += "ch.qos.logback" % "logback-classic" % "1.1.10"
 
 fork in run := false

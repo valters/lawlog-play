@@ -1,3 +1,5 @@
+import scala.collection.immutable.Seq
+
 import javax.inject._
 import play.api._
 import play.api.http.HttpFilters
