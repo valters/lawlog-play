@@ -124,32 +124,12 @@ object AcmeJson {
 
   val NonceKey = "nonce"
 
-  val RSA = "RSA"
-  val RsaKeySize = 2048 //4096
-  val RS256: JWSAlgorithm = JWSAlgorithm.RS256
-
-  private def keyPairGenerator = {
-    val kpg = KeyPairGenerator.getInstance(RSA)
-    kpg.initialize(RsaKeySize)
-    kpg
-  }
-
-  /** java security key pair */
-  def generateKeyPair(): RSAKey = {
-    val kp: KeyPair = keyPairGenerator.generateKeyPair
-
-    val jkeypair = new RSAKey.Builder( kp.getPublic().asInstanceOf[RSAPublicKey] )
-      .privateKey( kp.getPrivate().asInstanceOf[RSAPrivateKey] )
-      .algorithm( RS256 )
-
-    jkeypair.build()
-  }
 
   def sign( payload: String, nonce: String, keypair: RSAKey ): JWSObject = {
     val signer: JWSSigner = new RSASSASigner( keypair );
 
     // Prepare JWS object with simple string as payload
-    val jwsHeader = new JWSHeader.Builder( RS256 )
+    val jwsHeader = new JWSHeader.Builder( KeyStorage.RS256 )
           .customParam(NonceKey, nonce)
           .jwk( keypair.toPublicJWK() )
           .build();
@@ -200,6 +180,12 @@ object AcmeJson {
   }
 
   def encodeRequest( req: AcmeProtocol.AcceptChallengeHttp, nonce: String, keypair: RSAKey ): JsValue = {
+    val payload = Json.toJson( req ).toString()
+    logger.debug("accepting challenge: {}", payload )
+    toJson( sign( payload, nonce, keypair ) )
+  }
+
+  def encodeRequest( req: AcmeProtocol.CertificateRequest, nonce: String, keypair: RSAKey ): JsValue = {
     val payload = Json.toJson( req ).toString()
     logger.debug("accepting challenge: {}", payload )
     toJson( sign( payload, nonce, keypair ) )

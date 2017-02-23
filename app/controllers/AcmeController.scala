@@ -15,6 +15,9 @@ import scala.concurrent.Promise
 import scala.concurrent.Future
 
 import scala.concurrent.ExecutionContext.Implicits.global
+import java.util.concurrent.atomic.AtomicReference
+import java.security.cert.X509Certificate
+import io.github.valters.acme.KeyStorage
 
 /**
  * Handles HTTP certificate provisioning and renewal
@@ -22,7 +25,10 @@ import scala.concurrent.ExecutionContext.Implicits.global
 @Singleton
 class AcmeController @Inject() ( wsClient: WSClient ) extends Controller {
 
-  val keypair = AcmeJson.generateKeyPair()
+  val keypair = KeyStorage.getUserKey()
+  val domainKey = KeyStorage.getDomainKey()
+
+  val keyAuthHandle = new AtomicReference[String](null)
 
   /** test env URL */
   val LetsEncryptStaging = "https://acme-staging.api.letsencrypt.org"
@@ -40,6 +46,8 @@ class AcmeController @Inject() ( wsClient: WSClient ) extends Controller {
     val acmeAgreement = Promise[AcmeProtocol.RegistrationResponse]()
     val acmeChallenge = Promise[AcmeProtocol.AuthorizationResponse]()
     val acmeChallengeDetails = Promise[AcmeProtocol.ChallengeHttp]()
+    val afterChallengeDetails = Promise[AcmeProtocol.ChallengeHttp]()
+    val certificate = Promise[X509Certificate]()
 
     // when successfully retrieved directory, notify that AcmeServer promise is now available
     HttpClient.getDirectory( LetsEncryptStaging ).onSuccess{ case d: AcmeProtocol.Directory =>
@@ -101,7 +109,9 @@ class AcmeController @Inject() ( wsClient: WSClient ) extends Controller {
       val nonce = HttpClient.getNonce()
       println("++ authz nonce: " + nonce )
 
-      val req = AcmeProtocol.AcceptChallengeHttp( keyAuthorization = AcmeJson.withThumbprint( httpChallenge.token, keypair ) )
+      val keyAuth = AcmeJson.withThumbprint( httpChallenge.token, keypair )
+      keyAuthHandle.set( keyAuth ) // shared resource
+      val req = AcmeProtocol.AcceptChallengeHttp( keyAuthorization = keyAuth )
       val jwsReq = AcmeJson.encodeRequest( req, nonce, keypair )
 
       val server = getServer.value.get.get
@@ -120,19 +130,44 @@ class AcmeController @Inject() ( wsClient: WSClient ) extends Controller {
     Thread.sleep( 3000L )
 
     val getChallengeDetails = acmeChallengeDetails.future
-    val failedChallenge: Future[AcmeProtocol.ChallengeType] = getChallengeDetails.flatMap{ challenge: AcmeProtocol.ChallengeHttp => {
+    val afterChallenge: Future[AcmeProtocol.ChallengeType] = getChallengeDetails.flatMap{ challenge: AcmeProtocol.ChallengeHttp => {
 
       HttpClient.challengeDetails( challenge.uri )
     } }
-    failedChallenge.onSuccess{ case response: AcmeProtocol.ChallengeType =>
-      println( s"Details parsed: $response" ) }
+    afterChallenge.onSuccess{ case response: AcmeProtocol.ChallengeHttp =>
+      println( s"Details parsed: $response" )
+      afterChallengeDetails.success( response )
+    }
 
-    Await.result( failedChallenge, new DurationInt(10).seconds )
+    Await.result( afterChallenge, new DurationInt(10).seconds )
+    val getAfterChallenge = afterChallengeDetails.future
+    val issueCertificate: Future[X509Certificate] = getAfterChallenge.flatMap{ challenge: AcmeProtocol.ChallengeHttp => {
+
+      val server = getServer.value.get.get
+
+      val nonce = HttpClient.getNonce()
+      println("++ challenge nonce: " + nonce )
+
+      val csr = KeyStorage.generateCertificateSigningRequest( domainKey.toKeyPair, TestDomain )
+      val req = AcmeProtocol.CertificateRequest( csr = KeyStorage.asBase64( csr ) )
+      val jwsReq = AcmeJson.encodeRequest( req, nonce, keypair )
+
+      HttpClient.issue( server.newCert, jwsReq.toString() )
+    } }
+
+
 
     println("+ending" )
 
     Ok( "certified" )
   }
 
+  /** provides response to the .well-known/acme-challenge/ request */
+  def challenge( token: String ) = Action {
+     Option( keyAuthHandle.get() ) match {
+       case None => Ok( s"""{ "token": "$token" }""" )
+       case Some(key) => Ok( key )
+    }
+  }
 
 }

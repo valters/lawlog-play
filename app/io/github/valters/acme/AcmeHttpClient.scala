@@ -11,6 +11,7 @@ import play.api.libs.ws.WSClient
 import play.api.libs.ws.WSResponse
 import io.netty.handler.codec.http.HttpHeaders
 import javax.inject.Inject
+import java.security.cert.X509Certificate
 
 /** extract few fields of interest from the underlying http WSResponse */
 final case class Response( val status: Int, body: String, headers: Map[String, Seq[String]], nonce: Option[String] ) {
@@ -95,15 +96,11 @@ class AcmeHttpClient (wsClient: WSClient) {
 
         case Response(409, body, headers, nonce) =>
           logger.info("[{}] We already have an account", uri)
-//          val termsAndServices = for {
-//            regURL <- Option(headers.get(HttpHeaders.Names.LOCATION)).map(new URI(_))
-//            terms <- findTerms(headers)
-//          } yield {
-//            info("[%s] Agreement needs signing", client.endpoint, numTry)
-//            agreement(client, regURL, terms)
-//          }
-//          termsAndServices.getOrElse(Future.Done)
-          Future.failed( new IllegalStateException("409 acct exists" ) )
+          val regUrl = headers.get(HttpHeaders.Names.LOCATION).get.head
+          logger.info("  . folow up: {}", regUrl )
+          val termsUrl = findTerms( headers ).get
+          logger.info("  . terms of service: {}", termsUrl )
+          Future.successful( AcmeProtocol.SimpleRegistrationResponse( regUrl, termsUrl ) )
 
         case Response(status, body, headers, nonce) =>
           logger.error("[{}] Unable to register account after error {} tried {}", uri, status.toString(), body )
@@ -177,6 +174,21 @@ class AcmeHttpClient (wsClient: WSClient) {
         AcmeJson.parseChallenge( body )
       case Response(status, body, headers, nonce) =>
         throw new IllegalStateException("Unable to get challenge status details: " + status + ": " + body)
+    }
+  }
+
+  /** request a certificate */
+  def issue( uri: String, message: String ): Future[X509Certificate] = {
+    logger.debug("[{}] Requesting certificate", uri )
+
+    httpPOST( uri, MimeUrlencoded, message ).flatMap {
+      case Response(status, body, headers, nonce) if status < 250 =>
+        logger.info("[{}] Successfully requested certificate: {} {} {} {}", uri, body, headers, nonce)
+        Future.successful( null )
+
+      case Response(status, body, headers, nonce) =>
+        logger.error("[{}] Unable to request certificate: {} {} {} {}", uri, body, headers, nonce)
+        throw new IllegalStateException("Unable to request certificate: " + status + ": " + body)
     }
   }
 

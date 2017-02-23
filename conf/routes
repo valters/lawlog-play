@@ -15,4 +15,5 @@ GET     /assets/*file               controllers.Assets.versioned( path="/public"
 
 GET     /sandbox                    controllers.HomeController.sandbox
 
-GET     /cert                    controllers.AcmeController.cert
+GET     /cert                                 controllers.AcmeController.cert
+GET     /.well-known/acme-challenge/:token    controllers.AcmeController.challenge( token: String )
