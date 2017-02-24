@@ -11,12 +11,15 @@ import java.io.InputStream;
 import java.io.InputStreamReader;
 import java.io.OutputStream;
 import java.io.PrintWriter;
+import java.math.BigInteger;
 import java.net.URL;
+import java.security.Key;
 import java.security.KeyPair;
 import java.security.KeyPairGenerator;
 import java.security.KeyStore;
 import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
+import java.security.PrivateKey;
 import java.security.cert.Certificate;
 import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
@@ -24,6 +27,9 @@ import java.security.cert.X509Certificate;
 import java.security.interfaces.RSAPrivateKey;
 import java.security.interfaces.RSAPublicKey;
 import java.util.ArrayList;
+import java.util.Calendar;
+import java.util.Date;
+import java.util.GregorianCalendar;
 import java.util.List;
 import java.util.Optional;
 
@@ -41,6 +47,9 @@ import org.bouncycastle.asn1.x509.ExtensionsGenerator;
 import org.bouncycastle.asn1.x509.GeneralName;
 import org.bouncycastle.asn1.x509.GeneralNames;
 import org.bouncycastle.asn1.x509.X509ObjectIdentifiers;
+import org.bouncycastle.cert.X509v3CertificateBuilder;
+import org.bouncycastle.cert.jcajce.JcaX509CertificateConverter;
+import org.bouncycastle.cert.jcajce.JcaX509v3CertificateBuilder;
 import org.bouncycastle.openssl.PEMKeyPair;
 import org.bouncycastle.openssl.PEMParser;
 import org.bouncycastle.openssl.jcajce.JcaPEMKeyConverter;
@@ -54,11 +63,14 @@ import org.bouncycastle.pkcs.jcajce.JcaPKCS10CertificationRequestBuilder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import com.nimbusds.jose.JOSEException;
 import com.nimbusds.jose.JWSAlgorithm;
 import com.nimbusds.jose.jwk.RSAKey;
 import com.nimbusds.jose.util.Base64URL;
 
 public class KeyStorageUtil {
+    private static final String CF_X509 = "X.509";
+
     private static final Logger logger = LoggerFactory.getLogger( KeyStorageUtil.class );
 
     private static final int USER_KEY_SIZE = 4096;
@@ -86,13 +98,12 @@ public class KeyStorageUtil {
         return new RSAKey.Builder( (RSAPublicKey) kp.getPublic() ).privateKey( (RSAPrivateKey) kp.getPrivate() ).algorithm( RS256 ).build();
     }
 
-    private static RSAKey getOrGenerate( final String keyname, final int keySize ) {
+    private static RSAKey getOrGenerate( final String keyname, final int keySize, final KeyStore keystore, final String password ) {
         try {
-            final Optional<KeyPair> key = loadKeyPair( keyname );
+            final Optional<KeyPair> key = loadKeyPair( keyname, keystore, password );
             return key.flatMap( kp -> Optional.of( asRsaKey( kp ) ) )
                     .orElseGet( () -> {
                         final KeyPair kp = generateKeyPair( keySize );
-                        saveKeyPair( keyname, kp );
                         return asRsaKey( kp );
                     } );
         }
@@ -101,12 +112,26 @@ public class KeyStorageUtil {
         }
     }
 
-    public static RSAKey getUserKey( final String keyname ) {
-        return getOrGenerate( keyname, USER_KEY_SIZE );
+    /**
+     * Gets or generates and saves a user (main) keypair.
+     * @param keyname name (user.key)
+     * @param keystore key store to use
+     * @param password key store password
+     * @return key pair
+     */
+    public static RSAKey getUserKey( final String keyname, final KeyStore keystore, final String password ) {
+        try {
+            final RSAKey key = getOrGenerate( keyname, USER_KEY_SIZE, keystore, password );
+            saveKeyPair( keyname, key.toKeyPair(), keystore, password );
+            return key;
+        }
+        catch( final JOSEException e ) {
+            throw new RuntimeException( "Failed to save " + ALG_RSA + " key pair.", e );
+        }
     }
 
-    public static RSAKey getDomainKey( final String keyname ) {
-        return getOrGenerate( keyname, CERT_KEY_SIZE );
+    public static RSAKey getDomainKey( final String keyname, final KeyStore keystore, final String password ) {
+        return getOrGenerate( keyname, CERT_KEY_SIZE, keystore, password );
     }
 
     public static PKCS10CertificationRequest generateCertificateSigningRequest( final KeyPair domainKey, final String... domainNames )
@@ -150,27 +175,65 @@ public class KeyStorageUtil {
         }
     }
 
-    private static Optional<KeyPair> loadKeyPair( final String keyname ) throws IOException {
-        final File filePrivateKey = new File( keyname );
-        if( !filePrivateKey.exists() ) {
-            return Optional.empty();
-        }
+    private static Optional<KeyPair> loadKeyPair( final String keyname, final KeyStore keystore, final String password ) throws IOException {
+        try {
+            final Key key = keystore.getKey( keyname, password.toCharArray() );
+            if( key == null ) {
+                logger.debug( "[{}] key not found", keyname );
+                return Optional.empty();
+            }
+            final Certificate cert = keystore.getCertificate( keyname );
+            if( cert == null ) {
+                logger.warn( "[{}] public key (cert) not found: will re-generate private key", keyname );
+                return Optional.empty();
+            }
 
-        try( InputStream privateKeyInputStream = new FileInputStream( filePrivateKey ) ) {
-            return Optional.of( loadPem( privateKeyInputStream ) );
+            return Optional.of( new KeyPair( cert.getPublicKey(), (PrivateKey) key ) );
+        }
+        catch( final Exception e ) {
+            logger.warn( "Failed to load private key: {}, will generate", e.toString(), e );
+            return Optional.empty();
         }
     }
 
-    private static void saveKeyPair( final String keyname, final KeyPair kp ) {
+    private static void saveKeyPair( final String keyname, final KeyPair kp, final KeyStore keystore, final String password ) {
         try {
-            final File filePrivateKey = new File( keyname );
-            try( OutputStream outputStream = new FileOutputStream( filePrivateKey ) ) {
-                savePem( outputStream, kp );
-            }
+            keystore.setKeyEntry( keyname, kp.getPrivate(), password.toCharArray(), generateKeyCert( keyname, kp ) );
             logger.debug( "key saved: {}", keyname );
         }
-        catch( final IOException e ) {
+        catch( final Exception e ) {
             throw new RuntimeException( "Failed to generate (or load) " + ALG_RSA + " key pair.", e );
+        }
+    }
+
+    /** The public key gets stored in weird roundabout way */
+    private static Certificate[] generateKeyCert( final String keyname, final KeyPair kp ) {
+
+        final X500NameBuilder nameBuilder = new X500NameBuilder(BCStyle.INSTANCE);
+        nameBuilder.addRDN( BCStyle.CN, keyname );
+        final X500Name issuer = nameBuilder.build();
+
+        final Calendar cal = new GregorianCalendar();
+        final Date notBefore = cal.getTime();
+        cal.add( Calendar.YEAR, 50 );
+        final Date notAfter = cal.getTime();
+
+        final X509v3CertificateBuilder certBuilder = new JcaX509v3CertificateBuilder( issuer,
+                BigInteger.valueOf(System.currentTimeMillis()),
+                notBefore,
+                notAfter,
+                issuer, kp.getPublic() );
+
+        return new Certificate[] { sign( certBuilder, kp.getPrivate() ) };
+    }
+
+    private static Certificate sign( final X509v3CertificateBuilder certBuilder, final PrivateKey privateKey ) {
+        try {
+            final ContentSigner signer = new JcaContentSignerBuilder(SIG_SHA256).build( privateKey );
+            return new JcaX509CertificateConverter().getCertificate(certBuilder.build(signer));
+        }
+        catch( final Exception e ) {
+            throw new RuntimeException( "Failed to sign public key certificate.", e );
         }
     }
 
@@ -276,7 +339,7 @@ public class KeyStorageUtil {
 
     public static X509Certificate parseCertificate( final InputStream is ) {
         try {
-            final CertificateFactory certFactory = CertificateFactory.getInstance( "X.509" );
+            final CertificateFactory certFactory = CertificateFactory.getInstance( CF_X509 );
             final Certificate cert = certFactory.generateCertificate( is );
             return (X509Certificate) cert;
         }
@@ -287,9 +350,16 @@ public class KeyStorageUtil {
 
     public static KeyStore loadKeystore( final String filename, final String password )
             throws KeyStoreException, FileNotFoundException, IOException, NoSuchAlgorithmException, CertificateException {
+        final File file = new File( filename );
+        if( ! file.exists() ) {
+            logger.info( "[{}] key store not found; creating new", filename );
+            return newKeystore();
+        }
+
         try( final FileInputStream is = new FileInputStream( filename ) ) {
             final KeyStore keystore = KeyStore.getInstance( KeyStore.getDefaultType() );
             keystore.load( is, password.toCharArray() );
+            logger.info( "[{}] key store loaded", filename );
             return keystore;
         }
     }

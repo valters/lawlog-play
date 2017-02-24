@@ -146,7 +146,7 @@ class AcmeController @Inject() ( wsClient: WSClient ) extends Controller {
     } }
     issueCertificate.onSuccess{ case cert: X509Certificate =>
       logger.info("saving certificate")
-      Keys.generateKeyStore( cert )
+      Keys.updateKeyStore( cert )
     }
 
 

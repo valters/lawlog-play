@@ -31,39 +31,27 @@ object KeyStorage {
 class KeyStorage( params: KeyStorage.Params ) {
     private val logger = Logger[KeyStorage]
 
-    val userKey = KeyStorageUtil.getUserKey( params.UserKey )
-    val domainKey = KeyStorageUtil.getDomainKey( params.DomainKey )
+    val keystore = KeyStorageUtil.loadKeystore( params.AppKeystore, params.KeystorePassword )
+    val userKey = KeyStorageUtil.getUserKey( params.UserKey, keystore, params.KeystorePassword )
+    val domainKey = KeyStorageUtil.getDomainKey( params.DomainKey, keystore, params.KeystorePassword )
 
   def generateCertificateSigningRequest( domain: String ): PKCS10CertificationRequest = {
       KeyStorageUtil.generateCertificateSigningRequest( domainKey.toKeyPair(), domain )
   }
 
-  def generateKeyStore(cert: X509Certificate) = {
-    val ks = KeyStorageUtil.newKeystore
+  /** write the newly received domain certificate to the keystore */
+  def updateKeyStore(domainCertificate: X509Certificate) = {
 
-    ks.setCertificateEntry( params.DomainCertAlias, cert );
-    KeyStorageUtil.storeCertificateKey( ks, params.KeystorePassword, cert, domainKey.toKeyPair(), params.DomainKey );
+    keystore.setCertificateEntry( params.DomainCertAlias, domainCertificate );
+    KeyStorageUtil.storeCertificateKey( keystore, params.KeystorePassword, domainCertificate, domainKey.toKeyPair(), params.DomainKey );
 
-    val chain = KeyStorageUtil.getIntermediateChain( cert )
+    val chain = KeyStorageUtil.getIntermediateChain( domainCertificate )
     if( chain.isPresent() ) {
-      ks.setCertificateEntry( params.ChainCertAlias, chain.get )
+      keystore.setCertificateEntry( params.ChainCertAlias, chain.get )
     }
 
-    KeyStorageUtil.saveKeystore( ks, params.AppKeystore, params.KeystorePassword );
+    KeyStorageUtil.saveKeystore( keystore, params.AppKeystore, params.KeystorePassword );
     logger.info("wrote keystore: {}", params.AppKeystore )
   }
 
-    /*
-    public static void storeCertificate( final Certificate cert ) {
-        try {
-            final KeyStore keystore = loadKeystore( APP_KEYSTORE, KEYSTORE_PASSWORD );
-            keystore.setCertificateEntry( DOMAIN_CERT_ALIAS, cert );
-            saveKeystore( keystore, APP_KEYSTORE, KEYSTORE_PASSWORD );
-        }
-        catch( final Exception e ) {
-            throw new RuntimeException( "Failed to store certificate into app keystore[" + APP_KEYSTORE + "]", e );
-        }
-    }
-
-*/
 }
