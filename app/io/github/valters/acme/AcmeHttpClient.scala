@@ -12,6 +12,12 @@ import play.api.libs.ws.WSResponse
 import io.netty.handler.codec.http.HttpHeaders
 import javax.inject.Inject
 import java.security.cert.X509Certificate
+import com.nimbusds.jose.util.Base64URL
+import org.bouncycastle.jce.provider.X509CertParser
+import java.io.InputStream
+import java.security.cert.CertificateFactory
+import akka.util.ByteString
+import java.io.ByteArrayInputStream
 
 /** extract few fields of interest from the underlying http WSResponse */
 final case class Response( val status: Int, body: String, headers: Map[String, Seq[String]], nonce: Option[String] ) {
@@ -20,10 +26,21 @@ final case class Response( val status: Int, body: String, headers: Map[String, S
   }
 }
 
+/** binary response */
+final case class BResponse( val status: Int, body: ByteString, headers: Map[String, Seq[String]], nonce: Option[String] ) {
+  def this( resp: WSResponse ) {
+    this( resp.status, resp.bodyAsBytes, resp.allHeaders, resp.header( AcmeProtocol.NonceHeader ) )
+  }
+}
+
 class AcmeHttpClient (wsClient: WSClient) {
   private val logger = Logger[AcmeHttpClient]
 
+  /** default request content type */
   private val MimeUrlencoded = "application/x-www-form-urlencoded"
+
+  /** request the certificate in specific format that Java likes */
+  private val AcceptMimeCert = "application/pkix-cert"
 
   private val HeaderLink = "Link"
 
@@ -56,7 +73,9 @@ class AcmeHttpClient (wsClient: WSClient) {
 
   /** low level method */
   private def httpPOST( uri: String, mime: String, bytes: String ): Future[Response] = {
-    wsClient.url( uri ) // .withHeaders("content-type" -> "fake/contenttype; charset=utf-8") .contentType(
+    wsClient.url( uri )
+      .withHeaders(
+          HttpHeaders.Names.CONTENT_TYPE -> mime )
       .post( bytes ).map { resp =>
       val r = new Response(resp)
       putNonce( r.nonce )
@@ -64,13 +83,25 @@ class AcmeHttpClient (wsClient: WSClient) {
     }
   }
 
+  private def httpPOSTbin( uri: String, accept: String, bytes: String ): Future[BResponse] = {
+    wsClient.url( uri ) // .withHeaders("content-type" -> "fake/contenttype; charset=utf-8") .contentType(
+      .withHeaders(
+          HttpHeaders.Names.CONTENT_TYPE -> MimeUrlencoded,
+          HttpHeaders.Names.ACCEPT -> accept )
+      .post( bytes ).map { resp =>
+        val r = new BResponse(resp)
+        putNonce( r.nonce )
+        r
+      }
+  }
+
   def getDirectory(endpoint: String ): Future[AcmeProtocol.Directory] = {
     httpGET( endpoint + AcmeProtocol.DirectoryFragment ).map {
-      case Response(200, body, headers, nonce) =>
+      case Response( 200, body, headers, nonce ) =>
         logger.info( "body= {}, nonce= {}", body, nonce )
 
         AcmeJson.parseDirectory( body )
-      case Response(status, body, headers, nonce) =>
+      case Response( status, body, headers, nonce ) =>
         throw new IllegalStateException("Unable to get directory index: " + status + ": " + body)
     }
   }
@@ -78,43 +109,42 @@ class AcmeHttpClient (wsClient: WSClient) {
   /** server asks us to accept ToS as response */
   def registration( uri: String, message: String  ): Future[AcmeProtocol.SimpleRegistrationResponse] = {
     httpPOST( uri, MimeUrlencoded, message ).flatMap {
-        case Response(201, body, headers, nonce) =>
+        case Response( 201, body, headers, nonce ) =>
           logger.info("Successfully registered account: {} {} {} {}", uri, body, headers, nonce)
+          termsOfService( headers )
 
-          val regUrl = headers.get(HttpHeaders.Names.LOCATION).get.head
-          logger.info("  . folow up: {}", regUrl )
-          val termsUrl = findTerms( headers ).get
-          logger.info("  . terms of service: {}", termsUrl )
-          Future.successful( AcmeProtocol.SimpleRegistrationResponse( regUrl, termsUrl ) )
-
-        case Response(400, body, headers, nonce) if body contains "urn:acme:error:badNonce" =>
+        case Response( 400, body, headers, nonce ) if body contains "urn:acme:error:badNonce" =>
           logger.debug("[{}] Expired nonce used, getting new one", uri)
 //          getNonce(client).flatMap { gotNonce =>
 //            registration(client, numTry) // we don't count this as an error
 //          }
           Future.failed( new IllegalStateException("400 nonce expired" ) )
 
-        case Response(409, body, headers, nonce) =>
+        case Response( 409, body, headers, nonce ) =>
           logger.info("[{}] We already have an account", uri)
-          val regUrl = headers.get(HttpHeaders.Names.LOCATION).get.head
-          logger.info("  . folow up: {}", regUrl )
-          val termsUrl = findTerms( headers ).get
-          logger.info("  . terms of service: {}", termsUrl )
-          Future.successful( AcmeProtocol.SimpleRegistrationResponse( regUrl, termsUrl ) )
+          termsOfService( headers )
 
-        case Response(status, body, headers, nonce) =>
+        case Response( status, body, headers, nonce ) =>
           logger.error("[{}] Unable to register account after error {} tried {}", uri, status.toString(), body )
           throw new IllegalStateException("Unable to register: " + status + ": " + body)
     }
   }
 
+  private def termsOfService( headers: Map[String, Seq[String]] ): Future[AcmeProtocol.SimpleRegistrationResponse] = {
+      val regUrl = headers.get(HttpHeaders.Names.LOCATION).get.head
+      logger.info("  . folow up: {}", regUrl )
+      val termsUrl = findTerms( headers )
+      logger.info("  . terms of service: {}", termsUrl )
+      Future.successful( AcmeProtocol.SimpleRegistrationResponse( regUrl, termsUrl ) )
+  }
+
   /** server provides list of challenges as response */
   def authorize( uri: String, message: String  ): Future[AcmeProtocol.AuthorizationResponse] = {
     httpPOST( uri, MimeUrlencoded, message ).flatMap {
-        case Response(201, body, headers, nonce) =>
+        case Response( 201, body, headers, nonce ) =>
           logger.info("Successfully authorized account: {} {} {} {}", uri, body, headers, nonce)
           Future.successful( AcmeJson.parseAuthorization( body ) )
-        case Response(status, body, headers, nonce) =>
+        case Response( status, body, headers, nonce ) =>
           logger.error("[{}] Unable to authorized account after error {} tried {}", uri, status.toString(), body )
           throw new IllegalStateException("Unable to authorize: " + status + ": " + body)
     }
@@ -129,7 +159,7 @@ class AcmeHttpClient (wsClient: WSClient) {
       httpPOST( uri, MimeUrlencoded, message ).flatMap {
         case Response(code, body, headers, nonce) if code < 250 =>
           logger.info("[{}] Successfully signed Terms of Service: {} {} {} {}", uri, body, headers, nonce)
-          Future.successful( AcmeProtocol.RegistrationResponse( null ) )
+          Future.successful( AcmeProtocol.RegistrationResponse() )
 
         case Response(400, body, headers, nonce) if body contains "urn:acme:error:badNonce" =>
           logger.error("[{}] Expired nonce used, getting new one: {} {} {} {}", uri, body, headers, nonce)
@@ -143,11 +173,16 @@ class AcmeHttpClient (wsClient: WSClient) {
 
   /** locate the terms-of-service link and get the URI */
   private def findTerms(headers: Map[String, Seq[String]]): Option[String] = {
-    val links = headers.get(HeaderLink).get
+    val linksEntry = headers.get(HeaderLink)
+    linksEntry match {
+      case None => None
+      case Some( links ) => {
+        links.foreach{ item => logger.info( "Link: {}", item ) }
 
-    links.foreach{ item =>  println( s"Link: $item" ) }
-    links.find(_.endsWith(";rel=\"terms-of-service\""))
-      .flatMap(_.split(">").headOption.map(_.replaceAll("^<", "")))
+        links.find(_.endsWith(";rel=\"terms-of-service\""))
+          .flatMap(_.split(">").headOption.map(_.replaceAll("^<", "")))
+      }
+    }
   }
 
 
@@ -169,7 +204,7 @@ class AcmeHttpClient (wsClient: WSClient) {
   def challengeDetails(uri: String): Future[AcmeProtocol.ChallengeType]  = {
     httpGET( uri ).map {
       case Response(status, body, headers, nonce) if status < 250 =>
-        logger.info( "body= {}, nonce= {}", body, nonce )
+        logger.info( "status= {} body= {}, nonce= {}", status.toString(), body, nonce )
 
         AcmeJson.parseChallenge( body )
       case Response(status, body, headers, nonce) =>
@@ -181,15 +216,16 @@ class AcmeHttpClient (wsClient: WSClient) {
   def issue( uri: String, message: String ): Future[X509Certificate] = {
     logger.debug("[{}] Requesting certificate", uri )
 
-    httpPOST( uri, MimeUrlencoded, message ).flatMap {
-      case Response(status, body, headers, nonce) if status < 250 =>
-        logger.info("[{}] Successfully requested certificate: {} {} {} {}", uri, body, headers, nonce)
-        Future.successful( null )
+    httpPOSTbin( uri, AcceptMimeCert, message ).flatMap {
+      case BResponse(status, body, headers, nonce) if status < 250 =>
+        logger.info("[{}] Successfully requested certificate: {} {} {} {}", uri, status.toString(), headers, nonce, body)
+        Future.successful( KeyStorageUtil.parseCertificate( body.toByteBuffer.array() ) )
 
-      case Response(status, body, headers, nonce) =>
+      case BResponse(status, body, headers, nonce) =>
         logger.error("[{}] Unable to request certificate: {} {} {} {}", uri, body, headers, nonce)
         throw new IllegalStateException("Unable to request certificate: " + status + ": " + body)
     }
   }
+
 
 }

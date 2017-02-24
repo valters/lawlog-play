@@ -129,7 +129,7 @@ object AcmeJson {
     val signer: JWSSigner = new RSASSASigner( keypair );
 
     // Prepare JWS object with simple string as payload
-    val jwsHeader = new JWSHeader.Builder( KeyStorage.RS256 )
+    val jwsHeader = new JWSHeader.Builder( KeyStorageUtil.RS256 )
           .customParam(NonceKey, nonce)
           .jwk( keypair.toPublicJWK() )
           .build();

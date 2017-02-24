@@ -721,18 +721,18 @@ package object AcmeProtocol {
     * @param certificates   A URI from which a list of certificates issued for this account can be fetched via a GET request.
     * @param error possible error
     */
-  final case class RegistrationResponse(key: JWK, contact: Option[Array[String]] = None,
+  final case class RegistrationResponse( key: Option[JWK] = None, contact: Option[Array[String]] = None,
                                         recoveryKey: Option[RecoveryKeyServer] = None,
                                         agreement: Option[String] = None,
                                         authorizations: Option[String] = None,
                                         certificates: Option[String] = None,
-                                        error: Option[AcmeErrorMessage] = None) extends ResponseType
+                                        error: Option[AcmeErrorMessage] = None ) extends ResponseType
 
   /**
    * @param regURL uri that we will visit indicating that we agree to terms
-   * @param agreement url terms-of-service that we will say we agree to
+   * @param agreement url terms-of-service that we will say we agree to. if None, then ToS already has been agreed to and we don't need to agree again
    */
-  final case class SimpleRegistrationResponse( uri: String, agreement: String ) extends ResponseType
+  final case class SimpleRegistrationResponse( uri: String, agreement: Option[String] ) extends ResponseType
 
   /**
     * directory is a JSON dictionary whose keys are the “resource” values and
