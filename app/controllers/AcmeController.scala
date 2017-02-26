@@ -22,6 +22,7 @@ import io.github.valters.acme.KeyStorage
 import com.typesafe.scalalogging.Logger
 import scala.util.Success
 import scala.util.Failure
+import scala.annotation.tailrec
 
 /**
  * Handles HTTP certificate provisioning and renewal
@@ -66,15 +67,7 @@ class AcmeController @Inject() ( wsClient: WSClient ) extends Controller {
 
     startChallenge( acmeChallenge.future, acmeChallengeDetails )
 
-    logger.debug("+awaiting CHAL end" )
-    Await.result( acmeChallengeDetails.future, new DurationInt(40).seconds )
-
-    logger.info("+revisit details (after sleeping 3 seconds)" )
-    Thread.sleep( 3000L )
-
     finishChallenge( acmeChallengeDetails.future, afterChallengeDetails )
-
-    Await.result( afterChallengeDetails.future, new DurationInt(10).seconds )
 
     issueCertificate( afterChallengeDetails.future )
 
@@ -98,7 +91,7 @@ class AcmeController @Inject() ( wsClient: WSClient ) extends Controller {
   }
 
   /** register (or retrieve existing) ACME server account */
-  private def getInitialAccount( registration: Promise[AcmeProtocol.SimpleRegistrationResponse] ) = {
+  private def getInitialAccount( registration: Promise[AcmeProtocol.SimpleRegistrationResponse] ): Unit = {
 
     val futureReg: Future[AcmeProtocol.SimpleRegistrationResponse] = HttpClient.acmeServer.future.flatMap{ server: AcmeProtocol.AcmeServer => {
       logger.debug("+ server received" )
@@ -115,7 +108,7 @@ class AcmeController @Inject() ( wsClient: WSClient ) extends Controller {
   }
 
   /** check if reg.agreement Terms of Service URL is provided: we need to indicate we accept it. or otherwise proceed directly to next step */
-  private def agree( newReg: Future[AcmeProtocol.SimpleRegistrationResponse], agreement: Promise[AcmeProtocol.RegistrationResponse] ) = {
+  private def agree( newReg: Future[AcmeProtocol.SimpleRegistrationResponse], agreement: Promise[AcmeProtocol.RegistrationResponse] ): Unit = {
 
     val futureAgree: Future[AcmeProtocol.RegistrationResponse] = newReg.flatMap {
       reg: AcmeProtocol.SimpleRegistrationResponse => {
@@ -137,7 +130,7 @@ class AcmeController @Inject() ( wsClient: WSClient ) extends Controller {
       agreement.success( response ) }
   }
 
-  private def getAuthorizedAccount( getAgreedReg: Future[AcmeProtocol.RegistrationResponse], challenge: Promise[AcmeProtocol.AuthorizationResponse] ) = {
+  private def getAuthorizedAccount( getAgreedReg: Future[AcmeProtocol.RegistrationResponse], challenge: Promise[AcmeProtocol.AuthorizationResponse] ): Unit = {
     val futureAuth: Future[AcmeProtocol.AuthorizationResponse] = getAgreedReg.flatMap{ _ => {
 
       logger.debug("+ start authz" )
@@ -160,7 +153,7 @@ class AcmeController @Inject() ( wsClient: WSClient ) extends Controller {
       challenge.success( response ) }
   }
 
-  def startChallenge( getChallenges: Future[AcmeProtocol.AuthorizationResponse], challengeDetails: Promise[AcmeProtocol.ChallengeHttp] ) = {
+  def startChallenge( getChallenges: Future[AcmeProtocol.AuthorizationResponse], challengeDetails: Promise[AcmeProtocol.ChallengeHttp] ): Unit = {
 
     val futureChallenge: Future[AcmeProtocol.ChallengeHttp] = getChallenges.flatMap{ authz: AcmeProtocol.AuthorizationResponse => {
 
@@ -189,18 +182,40 @@ class AcmeController @Inject() ( wsClient: WSClient ) extends Controller {
       challengeDetails.success( response ) }
   }
 
-  def finishChallenge( getChallengeDetails: Future[AcmeProtocol.ChallengeHttp], afterChallengeDetails: Promise[AcmeProtocol.ChallengeHttp] ) = {
+  def finishChallenge( getChallengeDetails: Future[AcmeProtocol.ChallengeHttp], afterChallengeDetails: Promise[AcmeProtocol.ChallengeHttp] ): Unit = {
+
+    logger.debug("+awaiting CHAL end" )
+    Await.result( getChallengeDetails, new DurationInt(40).seconds )
+
+    afterChallengeDetails.success( finishChallenge( getChallengeDetails ) )
+
+    logger.info("+CHAL valid" )
+  }
+
+  @tailrec
+  private def finishChallenge( getChallengeDetails: Future[AcmeProtocol.ChallengeHttp] ): AcmeProtocol.ChallengeHttp = {
     val afterChallenge: Future[AcmeProtocol.ChallengeType] = getChallengeDetails.flatMap{ challenge: AcmeProtocol.ChallengeHttp => {
 
       HttpClient.challengeDetails( challenge.uri )
     } }
-    afterChallenge.onSuccess{ case response: AcmeProtocol.ChallengeHttp =>
-      logger.info( "Details parsed: {}", response )
-      afterChallengeDetails.success( response )
+
+    Await.result( afterChallenge, new DurationInt(2).seconds )
+
+    afterChallenge.value match {
+      case Some(Success(response: AcmeProtocol.ChallengeHttp)) if response.status == Some(AcmeProtocol.valid) =>
+         // ACME server agrees the challenge is fulfilled
+        response
+      case x => {
+         // something did not work: keep waiting
+        logger.debug("sleeping 1s ... {}", x )
+        Thread.sleep( 1000L )
+        finishChallenge( getChallengeDetails )
+      }
     }
   }
 
-  def issueCertificate( getAfterChallenge: Future[AcmeProtocol.ChallengeHttp] ) = {
+  def issueCertificate( getAfterChallenge: Future[AcmeProtocol.ChallengeHttp] ): Unit = {
+
     val issueCertificate: Future[X509Certificate] = getAfterChallenge.flatMap{ challenge: AcmeProtocol.ChallengeHttp => {
 
       val server = HttpClient.acmeServer.future.value.get.get
