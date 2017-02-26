@@ -749,11 +749,11 @@ package object AcmeProtocol {
   }
 
   /**
-   * Directory is cut down only to URIs that we use.
+   * Server is cut down only to URIs that we use.
    */
-  case class AcmeServer( newReg: String, newAuthz: String, newCert: String ) {
-    def this( directory: AcmeProtocol.Directory ) = {
-      this( directory.get( AcmeProtocol.new_reg ),
+  case class AcmeServer( dir: String, newReg: String, newAuthz: String, newCert: String ) {
+    def this( dir: String, directory: AcmeProtocol.Directory ) = {
+      this( dir, directory.get( AcmeProtocol.new_reg ),
           directory.get( AcmeProtocol.new_authz ),
           directory.get( AcmeProtocol.new_cert ) )
     }

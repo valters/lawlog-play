@@ -18,6 +18,8 @@ import java.io.InputStream
 import java.security.cert.CertificateFactory
 import akka.util.ByteString
 import java.io.ByteArrayInputStream
+import java.util.concurrent.TimeUnit
+import scala.concurrent.Promise
 
 /** extract few fields of interest from the underlying http WSResponse */
 final case class Response( val status: Int, body: String, headers: Map[String, Seq[String]], nonce: Option[String] ) {
@@ -36,6 +38,8 @@ final case class BResponse( val status: Int, body: ByteString, headers: Map[Stri
 class AcmeHttpClient (wsClient: WSClient) {
   private val logger = Logger[AcmeHttpClient]
 
+  val acmeServer = Promise[AcmeProtocol.AcmeServer]()
+
   /** default request content type */
   private val MimeUrlencoded = "application/x-www-form-urlencoded"
 
@@ -48,7 +52,16 @@ class AcmeHttpClient (wsClient: WSClient) {
 
   /** blocks until a nonce value is available */
   def getNonce(): String = {
-    nonceQueue.take
+    val nonce = nonceQueue.poll( 0, TimeUnit.SECONDS )
+    if( nonce != null ) {
+      nonce
+    }
+    else {
+      acmeServer.future.foreach { server =>
+        httpGetNonce( server.dir )
+      }
+      nonceQueue.take
+    }
   }
 
   /** insert nonce into queue if we gone one */
@@ -68,6 +81,16 @@ class AcmeHttpClient (wsClient: WSClient) {
       putNonce( r.nonce )
 
       r
+    }
+  }
+
+  /** low level method - only HEAD request to retrieve new Nonce header */
+  private def httpGetNonce(uri: String ): Unit = {
+    logger.info( "HEAD {}", uri )
+
+    wsClient.url( uri ).head().map { response =>
+      logger.debug( "{} Got a Nonce HEAD response {}", uri, response.statusText )
+      putNonce( response.header( AcmeProtocol.NonceHeader ) )
     }
   }
 
@@ -96,7 +119,7 @@ class AcmeHttpClient (wsClient: WSClient) {
   }
 
   def getDirectory(endpoint: String ): Future[AcmeProtocol.Directory] = {
-    httpGET( endpoint + AcmeProtocol.DirectoryFragment ).map {
+    httpGET( endpoint ).map {
       case Response( 200, body, headers, nonce ) =>
         logger.info( "body= {}, nonce= {}", body, nonce )
 
@@ -218,7 +241,7 @@ class AcmeHttpClient (wsClient: WSClient) {
 
     httpPOSTbin( uri, AcceptMimeCert, message ).flatMap {
       case BResponse(status, body, headers, nonce) if status < 250 =>
-        logger.info("[{}] Successfully requested certificate: {} {} {} {}", uri, status.toString(), headers, nonce, body)
+        logger.info("[{}] Successfully requested certificate: {} {} {}", uri, status.toString(), headers, nonce)
         Future.successful( KeyStorageUtil.parseCertificate( body.toByteBuffer.array() ) )
 
       case BResponse(status, body, headers, nonce) =>
