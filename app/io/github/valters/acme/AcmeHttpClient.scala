@@ -75,7 +75,7 @@ class AcmeHttpClient (wsClient: WSClient) {
 
     wsClient.url( uri ).withHeaders( headers.toList : _* ).get().map { response =>
       val statusText: String = response.statusText
-      println(s"Got a response $statusText")
+      logger.debug( "GET {} receives response {}", uri, statusText )
 
       val r = new Response( response )
       putNonce( r.nonce )
