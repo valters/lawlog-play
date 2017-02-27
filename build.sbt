@@ -19,7 +19,7 @@ libraryDependencies += "org.webjars" % "font-awesome" % "4.7.0"
 libraryDependencies += "io.github.valters" % "valters-xml" % "1.0.0"
 
 // acme
-libraryDependencies += "com.nimbusds" % "nimbus-jose-jwt" % "4.34.1"
+libraryDependencies += "io.github.valters" %% "play-acme-protocol" % "0.1.0-SNAPSHOT"
 
 // logging
 libraryDependencies += "com.typesafe.scala-logging" %% "scala-logging" % "3.5.0"
