@@ -1,16 +1,10 @@
 package controllers
 
 import javax.inject._
-import play.api._
 import play.api.mvc._
 import services.TableOfContents
 import utils.DateParam
-import utils.FileReader
 import play.twirl.api.Html
-import play.api.libs.json.Json
-import play.api.libs.json.JsString
-import play.api.libs.json.JsObject
-import play.api.libs.json.JsValue
 
 @Singleton
 class LawController @Inject() ( appToc: TableOfContents ) extends Controller {
@@ -21,13 +15,12 @@ class LawController @Inject() ( appToc: TableOfContents ) extends Controller {
       law.isoVersions match {
         case Nil => NotFound( s"No diffs found for law: $id" )
 
-        case (currVer,diffVer) +: _ => { // take seq [vector] head (don't care about rest), explode tuple into variables
+        case (currVer,diffVer) +: _ => // take seq [vector] head (don't care about rest), explode tuple into variables
           renderVersion( id, law, currVer, diffVer )
-        }
       }
     }
     catch {
-      case e: NoSuchElementException =>
+      case _: NoSuchElementException =>
         NotFound( s"Unrecognized law: $id" )
     }
   }

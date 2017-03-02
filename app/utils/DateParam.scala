@@ -1,8 +1,10 @@
 package utils
 
+import scala.util.matching.Regex
+
 /** not Y10K ready, I am afraid... */
 object DateParam {
-  val EUR_DATE_PATTERN = """(\d\d)\.(\d\d)\.(\d\d\d\d)""".r
+  val EUR_DATE_PATTERN: Regex = """(\d\d)\.(\d\d)\.(\d\d\d\d)""".r
 
   def eurToIso( date: String ): String = {
     date match {

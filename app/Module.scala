@@ -15,7 +15,7 @@ import services.JsonTableOfContents
  */
 class Module extends AbstractModule {
 
-  override def configure() = {
+  override def configure(): Unit = {
 
     bind(classOf[TableOfContents]).to(classOf[JsonTableOfContents])
 

@@ -1,9 +1,8 @@
 package services
 
-import scala.collection.mutable.HashMap
 import scala.collection.immutable.Seq
-
 import javax.inject.Singleton
+
 import play.api.Logger
 import play.api.libs.json.JsError
 import play.api.libs.json.JsObject
@@ -13,6 +12,8 @@ import play.api.libs.json.Json
 import utils.FileReader
 import utils.DateParam
 import org.w3c.dom.Document
+
+import scala.collection.mutable
 
 /** component is injected into a controller */
 trait TableOfContents {
@@ -27,17 +28,17 @@ trait TableOfContents {
 
 object LikumiDb {
     /** actual content is provided by likumi-db project: https://github.com/valters/likumi-db */
-    val AssetRoot = "app/likumi-db"
+    val AssetRoot: String = "app/likumi-db"
     /** main point of entry */
-    val TocJsonAsset = AssetRoot+"/toc.json"
-    val JsonRootKey = "likumi"
-    val Pamatlikums = "satversme"
+    val TocJsonAsset: String = AssetRoot+"/toc.json"
+    val JsonRootKey: String = "likumi"
+    val Pamatlikums: String = "satversme"
     /** for each law, known versions list is stored here, in .ver file */
-    val VersionsRoot = AssetRoot+"/version"
-    val DiffsRoot = AssetRoot+"/diff"
-    val DiffReportSuffix = ".html.txt-diff.xml"
+    val VersionsRoot: String = AssetRoot+"/version"
+    val DiffsRoot: String = AssetRoot+"/diff"
+    val DiffReportSuffix: String = ".html.txt-diff.xml"
     /** we take content from this root node */
-    val DiffElementXpath = "/diffreport/diff";
+    val DiffElementXpath: String = "/diffreport/diff"
 }
 
 /** is read from json file directly */
@@ -66,7 +67,7 @@ class LawMetadata( val key: String, val meta: LawMetadataJson, val versions: Seq
     }
 
     /** take just the node text */
-    def diffText( doc: Document ) = {
+    def diffText( doc: Document ): String = {
       FileReader.nodeText( doc, LikumiDb.DiffElementXpath )
     }
 
@@ -104,7 +105,7 @@ class JsonTableOfContents extends TableOfContents {
     // convert json to Map by binding key to corresponding LawMetadata: ultimately toMap converts our list of tuples into hash map
     lazy val laws: Map[String, LawMetadataJson] = keys.map( key ⇒ ( key, validateLaw( key ).get ) ).toMap
 
-    lazy val lawMap: HashMap[String, LawMetadata] = new HashMap()
+    lazy val lawMap: mutable.HashMap[String, LawMetadata] = new mutable.HashMap()
 
     override def law( key: String ): LawMetadata = lawMap.getOrElseUpdate( key, new LawMetadata( key, laws( key ), versions( key ) ) )
 
@@ -115,7 +116,7 @@ class JsonTableOfContents extends TableOfContents {
      *  dates when law was changed, which we then later map to diff file
      *  (which is xml file containing changes report).
      */
-    val versionsMap: HashMap[String, Seq[String]] = new HashMap()
+    val versionsMap: mutable.HashMap[String, Seq[String]] = new mutable.HashMap()
 
     /**
      * @param key law short-id

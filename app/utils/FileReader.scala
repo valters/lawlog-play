@@ -6,7 +6,6 @@ import java.nio.file.Files
 import java.nio.file.Paths
 import java.util.stream.Collectors
 
-import scala.Vector
 import scala.collection.convert.wrapAsScala.asScalaBuffer
 
 import play.api.libs.json.JsValue
@@ -52,7 +51,7 @@ object FileReader {
   }
 
   def nodeText( document: Document, xpathExpr: String ): String = {
-    val text = transform.nodesToString( xpath.findNode( document, xpathExpr ).getChildNodes() )
+    val text = transform.nodesToString( xpath.findNode( document, xpathExpr ).getChildNodes )
     text
   }
 

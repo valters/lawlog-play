@@ -1,6 +1,7 @@
 import scala.collection.immutable.Seq
-
 import javax.inject._
+
+import filters.AccessLoggingFilter
 import play.api._
 import play.api.http.HttpFilters
 import play.api.mvc._
@@ -23,7 +24,7 @@ class Filters @Inject() (
   env: Environment,
   loggingFilter: filters.AccessLoggingFilter) extends HttpFilters {
 
-  override val filters = {
+  override val filters: Seq[Filter] = {
     Seq(loggingFilter)
   }
 

@@ -3,7 +3,7 @@ package utils
 /** developer metadata */
 object AppInfo {
 
-  final val Repository = "https://github.com/valters/lawlog-play"
-  final val ReportIssues = Repository+"/issues"
+  final val Repository: String = "https://github.com/valters/lawlog-play"
+  final val ReportIssues: String = Repository+"/issues"
 
 }
