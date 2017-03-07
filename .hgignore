@@ -8,7 +8,7 @@ target_sbt/
 .cache/
 .history
 
-# Eclipse
+# IDE
 .settings/
 .metadata
 *.tmp
@@ -24,6 +24,7 @@ local.properties
 .buildpath
 .target
 .texlipse
+.idea
 
 # Play
 .sbtserver/
