@@ -13,7 +13,7 @@
                     </li>
                     <div class="menu">
         @for( ( date, isoDt ) <- law.isoVersions ) {
-            <li><a v-on:click.stop="loadLaw( '@key', '@isoDt' )" @if( currVer == date ) { class="active" }>@date</a></li>
+            <li><a id="@isoDt" v-on:click.stop="loadLaw( '@key', '@isoDt' )">@date</a></li>
         }
                     </div>
 
@@ -25,8 +25,7 @@
                         <div class="panel-heading">@law.meta.desc</div>
                         <div class="panel-body">
 
-                            <div v-html="body_content">
-                                @diffContent
+                            <div v-show="fromAjax" v-html="bodyContent">
                             </div>
 
                         </div>
@@ -38,5 +37,8 @@
 </div>
 
 @tags.script.asset( "javascripts/law.js" )
+<script type="text/javascript">
+    law.loadLaw( '@key', '@diffVer' )
+</script>
 
 }
