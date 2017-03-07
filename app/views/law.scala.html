@@ -3,7 +3,7 @@
 @import utils.DateParam._
 
 @main("LawLog :: "+law.meta.desc, "index") {
-<div class="container">
+<div id="lawdiff-ajax-content" class="container">
     <div class="row">
         <div class="wrapper">
             <div class="side-bar">
@@ -13,7 +13,7 @@
                     </li>
                     <div class="menu">
         @for( ( date, isoDt ) <- law.isoVersions ) {
-            <li><a href="@routes.LawController.version( key, isoDt )" @if( currVer == date ) { class="active" }>@date</a></li>
+            <li><a v-on:click.stop="loadLaw( '@key', '@isoDt' )" @if( currVer == date ) { class="active" }>@date</a></li>
         }
                     </div>
 
@@ -24,9 +24,11 @@
                     <div class="panel panel-default">
                         <div class="panel-heading">@law.meta.desc</div>
                         <div class="panel-body">
-<div id="lawdiff-ajax-content">
-@diffContent
-</div>
+
+                            <div v-html="body_content">
+                                @diffContent
+                            </div>
+
                         </div>
                     </div>
                 </div>
@@ -34,5 +36,7 @@
         </div>
     </div>
 </div>
+
+@tags.script.asset( "javascripts/law.js" )
 
 }
