@@ -1,6 +1,6 @@
-@(key: String, scripts: Html )
+@( key: String )
 
-@main("LawLog :: Dev Sandbox", "sandbox", scripts) {
+@main("LawLog :: Dev Sandbox", "sandbox", Html("") ) {
     <p>Your new application is ready. Welcome to your new app.</p>
 
     <ul>
@@ -8,6 +8,27 @@
     </ul>
 
     <div id="test-json">
+        <div v-html="body_content"></div>
     </div>
+
+<div id="test-vue">
+    {{ message }}
+</div>
+
+<script type="text/javascript">
+var app = new Vue({
+  el: '#test-vue',
+  data: {
+    message: 'Hello Vue!'
+  },
+
+  mounted: function() {
+    console.log("IN VIEW");
+  }
+
+})
+</script>
+
+@tags.script.asset( "javascripts/hello.js" )
 
 }

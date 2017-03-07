@@ -6,7 +6,6 @@
  *@
 @(title: String, tab: String = "", scripts: Html = Html(""))(content: Html)
 
-@import tags._
 @import utils.AppInfo
 
 <!DOCTYPE html>
@@ -20,7 +19,7 @@
         <link rel="stylesheet" media="screen" href="@routes.Assets.versioned("stylesheets/diff.css")">
 
         <script src="@routes.Assets.versioned("lib/jquery/jquery.min.js")" type="text/javascript"></script>
-        <script src="@routes.Assets.versioned("lib/bootstrap/js/bootstrap.min.js")" type="text/javascript"></script>
+        <script src="@routes.Assets.versioned("lib/vue/vue.js")" type="text/javascript"></script>
         @scripts
 
         <link rel="shortcut icon" type="image/png" href="@routes.Assets.versioned("images/favicon.png")">
@@ -59,7 +58,7 @@
 
         <div class="footer">
             <div class="container">
-                <p>@repository.home("""<i class="fa fa-github fa-2x"></i> View on Github""").
+                <p>@tags.repository.home("""<i class="fa fa-github fa-2x"></i> View on Github""").
                 Code licensed under <a href="https://www.gnu.org/licenses/gpl-3.0.html" target="_blank">GPLv3</a></p>
                 <p>Kaut kas nestrādā? Lūdzu dod ziņu iekš <a href="@AppInfo.ReportIssues">projekta Github issues</a>.</p>
             </div>

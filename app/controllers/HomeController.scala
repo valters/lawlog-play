@@ -23,8 +23,7 @@ class HomeController @Inject() ( appToc: TableOfContents ) extends Controller {
   }
 
   def sandbox = Action {
-    val script = routes.Assets.versioned("javascripts/hello.js")
-    Ok( views.html.sandbox( "testing", Html(s"""<script src="$script" type="text/javascript"></script>""" ) ) )
+    Ok( views.html.sandbox( "testing" ) )
   }
 
 }
