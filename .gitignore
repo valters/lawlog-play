@@ -1,0 +1,35 @@
+# General files and folders
+bin/
+tmp/
+target/
+target_sbt/
+.cache/
+.history
+
+# IDE
+.settings/
+.metadata
+*.tmp
+*.bak
+*.swp
+*~.nib
+local.properties
+.loadpath
+.project
+*.launch
+.classpath
+.factorypath
+.buildpath
+.target
+.texlipse
+.idea
+
+# Play
+.sbtserver/
+logs/
+project/.sbtserver*
+libexec/
+.cache-*
+
+# Runtime
+app/likumi-db/
