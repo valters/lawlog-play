@@ -42,7 +42,8 @@
 
 @tags.script.asset( "javascripts/law.js" )
 <script type="text/javascript">
-    law.seedLaw( "@diffVer" )
+  var Law = lawInit( "@diffVer" )
+  LawScroll.setup_click_handlers()
 </script>
 
 }
