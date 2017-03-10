@@ -48,9 +48,9 @@ function lawInit( version ) {
                 }
             },
 
-            // before we do ajax replace, we want to hide something that was pre-rendered server side
+            // before we do ajax replace, we want to completely remove something that was pre-rendered server side
             hideServerSideContent: function() {
-                $('#lawdiff-server-side').hide()
+                $('#lawdiff-server-side').remove()
             }
 
           }
